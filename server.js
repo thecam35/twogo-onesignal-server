@@ -1,30 +1,26 @@
 const express = require('express');
 const axios = require('axios');
 const app = express();
+
+// ✅ PERMITIR TODO (solo para desarrollo)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Allow-Methods', '*');
+  next();
+});
+
 app.use(express.json());
 
-app.post('/api/send-to-app', async (req, res) => {
+app.post('/api/send-notification', async (req, res) => {
   try {
     const { title, message } = req.body;
-
-    // ✅ PAYLOAD ESPECÍFICO PARA APPS MÓVILES
+    
     const payload = {
       app_id: "f8865b25-29e8-48e8-a5d5-b54e69098a2e",
-      headings: { en: title },
       contents: { en: message },
-      
-      // ✅ ENVIAR SOLO A DISPOSITIVOS MÓVILES
-      included_segments: ["Total Subscriptions"], // Solo suscriptores móviles
-      
-      // ✅ CONFIGURACIÓN ANDROID
-      android_accent_color: "FF4A6BFF",
-      android_visibility: 1,
-      small_icon: "ic_stat_onesignal_default",
-      
-      // ✅ SOLO PLATAFORMAS MÓVILES
-      isAnyWeb: false,    // ❌ NO web
-      isAndroid: true,    // ✅ SÍ Android
-      isIos: false        // ❌ NO iOS
+      headings: { en: title },
+      included_segments: ["All"]
     };
 
     const response = await axios.post(
@@ -38,15 +34,11 @@ app.post('/api/send-to-app', async (req, res) => {
       }
     );
 
-    res.json({ 
-      success: true, 
-      message: 'Enviado SOLO a app móvil',
-      data: response.data 
-    });
+    res.json({ success: true, data: response.data });
 
   } catch (error) {
     res.json({ success: false, error: error.message });
   }
 });
 
-app.listen(3000, () => console.log('🚀 Servidor para APP móvil'));
+app.listen(3000, () => console.log('✅ Servidor sin CORS'));
