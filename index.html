@@ -2143,51 +2143,59 @@
             }, 400);
         }
 
-        // ========== SISTEMA DE NOTIFICACIONES PUSH CON ONESIGNAL ==========
+        // ========== CONFIGURACIÓN DEL SERVIDOR ONESIGNAL ==========
+const ONESIGNAL_SERVER_URL = 'https://twogo-onesignal-server.onrender.com';
 
-        // Enviar notificación push a través de OneSignal
-        function sendPushNotification(title, message, target = 'all', data = {}) {
-            console.log(`📢 Enviando notificación push: ${title} - ${message} a ${target}`);
-            
-            // En una implementación real, aquí enviarías la notificación al servidor
-            // que luego la enviaría a OneSignal API
-            // Por ahora, simularemos el envío
-            
-            // Simular envío de notificación
-            setTimeout(() => {
-                console.log(`✅ Notificación push enviada: ${title}`);
-                showToast('📢 Notificación Enviada', 'La notificación push se ha enviado correctamente', 'success');
-            }, 1000);
-            
-            // En una implementación real, usarías algo como:
-            /*
-            fetch('https://onesignal.com/api/v1/notifications', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Basic ' + YOUR_REST_API_KEY
-                },
-                body: JSON.stringify({
-                    app_id: "f8865b25-29e8-48e8-a5d5-b54e69098a2e",
-                    headings: {"en": title},
-                    contents: {"en": message},
-                    included_segments: target === 'all' ? ["All"] : 
-                                     target === 'passengers' ? ["Passengers"] : 
-                                     target === 'drivers' ? ["Drivers"] : ["All"],
-                    data: data
-                })
+// Función global para enviar notificaciones push
+window.sendPushNotification = async function(title, message, target = 'all', data = {}) {
+    console.log(`📢 Enviando notificación push: ${title} - ${message} a ${target}`);
+    
+    try {
+        const response = await fetch(`${ONESIGNAL_SERVER_URL}/api/send-notification`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: title,
+                message: message,
+                target: target,
+                data: data
             })
-            .then(response => response.json())
-            .then(data => {
-                console.log('✅ Notificación push enviada:', data);
-                showToast('📢 Notificación Enviada', 'La notificación push se ha enviado correctamente', 'success');
-            })
-            .catch(error => {
-                console.error('❌ Error enviando notificación push:', error);
-                showToast('❌ Error', 'No se pudo enviar la notificación push', 'error');
-            });
-            */
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            console.log('✅ Notificación push enviada:', result);
+            showToast('📢 Notificación Enviada', 'La notificación push se ha enviado correctamente', 'success');
+            return result;
+        } else {
+            console.error('❌ Error enviando notificación push:', result.error);
+            showToast('❌ Error', 'No se pudo enviar la notificación push: ' + result.error, 'error');
+            return null;
         }
+    } catch (error) {
+        console.error('❌ Error de conexión:', error);
+        showToast('❌ Error', 'Error de conexión con el servidor de notificaciones', 'error');
+        return null;
+    }
+}
+
+// Función de prueba global
+window.testNotificationSystem = function() {
+    sendPushNotification(
+        "🧪 Test del Sistema", 
+        "Verificando que las notificaciones funcionen correctamente", 
+        "all",
+        { test: true, timestamp: new Date().toISOString() }
+    ).then(result => {
+        console.log("Resultado completo:", result);
+        if (result && result.success) {
+            alert('🎉 ¡SISTEMA FUNCIONANDO! Notificación enviada con ID: ' + result.data.id);
+        }
+    });
+}
 
         // ========== SISTEMA DE CHAT EN TIEMPO REAL ==========
 
@@ -4113,6 +4121,7 @@
     </script>
 </body>
 </html>
+
 
 
 
