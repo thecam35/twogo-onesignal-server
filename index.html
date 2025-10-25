@@ -1942,16 +1942,16 @@
     <script>
         // ========== CONFIGURACIÓN ONESIGNAL ==========
         window.OneSignal = window.OneSignal || [];
-        OneSignal.push(function() {
-            OneSignal.init({
-                appId: "f8865b25-29e8-48e8-a5d5-b54e69098a2e",
-                safari_web_id: "web.onesignal.auto.7cdfwjjj-5beo-rjov-wvhg-scmkf2zy64n6",
-                notifyButton: {
-                    enable: false,
-                },
-                allowLocalhostAsSecureOrigin: true,
-            });
-        });
+OneSignal.push(function() {
+    OneSignal.init({
+        appId: "f8865b25-29e8-48e8-a5d5-b54e69098a2e",
+        safari_web_id: "web.onesignal.auto.7cdfwjjj-5beo-rjov-wvhg-scmkf2zy64n6",
+        notifyButton: {
+            enable: false,
+        },
+        allowLocalhostAsSecureOrigin: true,
+    });
+})
 
         // ========== CONFIGURACIÓN FIREBASE ==========
         const firebaseConfig = {
@@ -4105,4 +4105,5 @@ async function sendPushNotification(title, message, target = 'all', data = {}) {
 </body>
 
 </html>
+
 
