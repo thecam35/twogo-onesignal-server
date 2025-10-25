@@ -70,7 +70,7 @@ app.post('/api/send-notification', async (req, res) => {
   }
 });
 
-// ✅ NUEVA FUNCIÓN: Enviar por segmentos a múltiples plataformas
+// ✅ FUNCIÓN CORREGIDA: Enviar por segmentos a múltiples plataformas
 async function sendBySegments(title, message, target, data = {}, platforms = ['web', 'android', 'ios']) {
   // Determinar el segmento objetivo
   let included_segments;
@@ -86,7 +86,7 @@ async function sendBySegments(title, message, target, data = {}, platforms = ['w
       included_segments = ['All'];
   }
 
-  // ✅ CONFIGURACIÓN PARA MÚLTIPLES PLATAFORMAS
+  // ✅ CONFIGURACIÓN CORREGIDA PARA MÚLTIPLES PLATAFORMAS
   const notificationPayload = {
     app_id: ONESIGNAL_APP_ID,
     headings: { en: title },
@@ -94,10 +94,10 @@ async function sendBySegments(title, message, target, data = {}, platforms = ['w
     included_segments: included_segments,
     data: data || {},
     
-    // ✅ CONFIGURACIÓN PARA WEB
+    // ✅ CONFIGURACIÓN CORREGIDA PARA WEB
     chrome_web_icon: 'https://twogo.com/icon.png',
     chrome_web_badge: 'https://twogo.com/badge.png',
-    url: data?.url || 'https://twogo.com',
+    // ⚠️ CORRECCIÓN: Usar solo web_url, NO url
     web_url: data?.url || 'https://twogo.com',
     
     // ✅ CONFIGURACIÓN PARA ANDROID
@@ -116,27 +116,16 @@ async function sendBySegments(title, message, target, data = {}, platforms = ['w
     ios_attachments: data?.image ? { id: 'image', url: data.image } : undefined,
     
     // ✅ CONFIGURACIÓN GLOBAL
-    send_after: new Date(Date.now() + 1000).toISOString(), // Enviar en 1 segundo
-    delayed_option: 'timezone',
-    delivery_time_of_day: '9:00AM',
-    
-    // ✅ INCLUIR TODAS LAS PLATAFORMAS
-    isAnyWeb: platforms.includes('web'),
-    isAndroid: platforms.includes('android'),
-    isIos: platforms.includes('ios'),
-    
-    // ✅ CONFIGURACIÓN DE PRIORIDAD
     priority: 7, // Alta prioridad
     content_available: true, // Para iOS background updates
     mutable_content: true // Para modificaciones en iOS
   };
 
-  // Filtrar configuraciones basado en plataformas seleccionadas
+  // ⚠️ CORRECCIÓN: Remover configuraciones problemáticas basado en plataformas
   if (!platforms.includes('web')) {
     delete notificationPayload.chrome_web_icon;
     delete notificationPayload.chrome_web_badge;
-    delete notificationPayload.url;
-    delete notificationPayload.web_url;
+    delete notificationPayload.web_url; // ⚠️ Solo web_url, no url
   }
 
   if (!platforms.includes('android')) {
@@ -154,6 +143,8 @@ async function sendBySegments(title, message, target, data = {}, platforms = ['w
     delete notificationPayload.ios_attachments;
   }
 
+  console.log('📤 Payload enviado a OneSignal:', JSON.stringify(notificationPayload, null, 2));
+
   const response = await axios.post(
     'https://onesignal.com/api/v1/notifications',
     notificationPayload,
@@ -169,14 +160,14 @@ async function sendBySegments(title, message, target, data = {}, platforms = ['w
   return response.data;
 }
 
-// ✅ NUEVA FUNCIÓN: Enviar a usuarios específicos en múltiples plataformas
+// ✅ FUNCIÓN CORREGIDA: Enviar a usuarios específicos en múltiples plataformas
 async function sendToSpecificUsers(title, message, playerIds, data = {}, platforms = ['web', 'android', 'ios']) {
   // Si playerIds es un array vacío, no enviar
   if (!playerIds || playerIds.length === 0) {
     throw new Error('No player IDs provided');
   }
 
-  // ✅ CONFIGURACIÓN PARA MÚLTIPLES PLATAFORMAS
+  // ✅ CONFIGURACIÓN CORREGIDA
   const notificationPayload = {
     app_id: ONESIGNAL_APP_ID,
     headings: { en: title },
@@ -184,10 +175,11 @@ async function sendToSpecificUsers(title, message, playerIds, data = {}, platfor
     include_player_ids: Array.isArray(playerIds) ? playerIds : [playerIds],
     data: data || {},
     
-    // ✅ CONFIGURACIÓN PARA WEB
+    // ✅ CONFIGURACIÓN CORREGIDA PARA WEB
     chrome_web_icon: 'https://twogo.com/icon.png',
     chrome_web_badge: 'https://twogo.com/badge.png',
-    url: data?.url || 'https://twogo.com',
+    // ⚠️ CORRECCIÓN: Usar solo web_url, NO url
+    web_url: data?.url || 'https://twogo.com',
     
     // ✅ CONFIGURACIÓN PARA ANDROID
     android_accent_color: 'FF4A6BFF',
@@ -208,11 +200,11 @@ async function sendToSpecificUsers(title, message, playerIds, data = {}, platfor
     mutable_content: true
   };
 
-  // Filtrar configuraciones basado en plataformas seleccionadas
+  // ⚠️ CORRECCIÓN: Remover configuraciones basado en plataformas
   if (!platforms.includes('web')) {
     delete notificationPayload.chrome_web_icon;
     delete notificationPayload.chrome_web_badge;
-    delete notificationPayload.url;
+    delete notificationPayload.web_url; // ⚠️ Solo web_url
   }
 
   if (!platforms.includes('android')) {
@@ -229,6 +221,8 @@ async function sendToSpecificUsers(title, message, playerIds, data = {}, platfor
     delete notificationPayload.ios_sound;
     delete notificationPayload.ios_attachments;
   }
+
+  console.log('📤 Payload para usuarios específicos:', JSON.stringify(notificationPayload, null, 2));
 
   const response = await axios.post(
     'https://onesignal.com/api/v1/notifications',
