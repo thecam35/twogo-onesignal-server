@@ -23,7 +23,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// ✅ NUEVO: Endpoint mejorado para enviar notificaciones a TODAS las plataformas
+// ✅ Endpoint mejorado para enviar notificaciones
 app.post('/api/send-notification', async (req, res) => {
   try {
     const { title, message, target, data, platforms = ['web', 'android', 'ios'], specificUserIds = [] } = req.body;
@@ -38,14 +38,14 @@ app.post('/api/send-notification', async (req, res) => {
 
     let notificationResults = [];
 
-    // ✅ ENVIAR A USUARIOS ESPECÍFICOS (Para aprobación de conductores)
+    // ✅ ENVIAR A USUARIOS ESPECÍFICOS
     if (specificUserIds.length > 0) {
       console.log(`📱 Enviando a usuarios específicos: ${specificUserIds.length} usuarios`);
       
       const userNotification = await sendToSpecificUsers(title, message, specificUserIds, data, platforms);
       notificationResults.push(userNotification);
     } 
-    // ✅ ENVIAR POR SEGMENTOS (Para notificaciones masivas)
+    // ✅ ENVIAR POR SEGMENTOS
     else {
       console.log(`🌍 Enviando notificación por segmentos: ${target}`);
       
@@ -70,7 +70,7 @@ app.post('/api/send-notification', async (req, res) => {
   }
 });
 
-// ✅ FUNCIÓN CORREGIDA: Enviar por segmentos a múltiples plataformas
+// ✅ FUNCIÓN MEJORADA: Enviar por segmentos
 async function sendBySegments(title, message, target, data = {}, platforms = ['web', 'android', 'ios']) {
   // Determinar el segmento objetivo
   let included_segments;
@@ -86,7 +86,7 @@ async function sendBySegments(title, message, target, data = {}, platforms = ['w
       included_segments = ['All'];
   }
 
-  // ✅ CONFIGURACIÓN CORREGIDA PARA MÚLTIPLES PLATAFORMAS
+  // ✅ CONFIGURACIÓN MEJORADA PARA MÚLTIPLES PLATAFORMAS
   const notificationPayload = {
     app_id: ONESIGNAL_APP_ID,
     headings: { en: title },
@@ -94,56 +94,50 @@ async function sendBySegments(title, message, target, data = {}, platforms = ['w
     included_segments: included_segments,
     data: data || {},
     
-    // ✅ CONFIGURACIÓN CORREGIDA PARA WEB
-    chrome_web_icon: 'https://twogo.com/icon.png',
-    chrome_web_badge: 'https://twogo.com/badge.png',
-    // ⚠️ CORRECCIÓN: Usar solo web_url, NO url
-    web_url: data?.url || 'https://twogo.com',
+    // ✅ CONFIGURACIÓN ESPECÍFICA POR PLATAFORMA
+    ...(platforms.includes('web') && {
+      chrome_web_icon: 'https://twogo.com/icon.png',
+      chrome_web_badge: 'https://twogo.com/badge.png',
+      web_url: data?.url || 'https://twogo.com'
+    }),
     
-    // ✅ CONFIGURACIÓN PARA ANDROID
-    android_accent_color: 'FF4A6BFF',
-    android_led_color: 'FF4A6BFF',
-    android_visibility: 1,
-    android_group: 'Twogo_Notifications',
-    android_group_message: { en: `Tienes %n notificaciones nuevas` },
-    large_icon: 'https://twogo.com/icon.png',
-    small_icon: 'ic_stat_onesignal_default',
+    ...(platforms.includes('android') && {
+      android_accent_color: 'FF4A6BFF',
+      android_led_color: 'FF4A6BFF',
+      android_visibility: 1,
+      android_group: 'Twogo_Notifications',
+      android_group_message: { en: `Tienes %n notificaciones nuevas` },
+      large_icon: 'https://twogo.com/icon.png',
+      small_icon: 'ic_stat_onesignal_default',
+      // ✅ IMPORTANTE: Configuración específica de Android
+      android_channel_id: 'twogo-notifications',
+      priority: 7
+    }),
     
-    // ✅ CONFIGURACIÓN PARA iOS
-    ios_badgeType: 'Increase',
-    ios_badgeCount: 1,
-    ios_sound: 'notification.wav',
-    ios_attachments: data?.image ? { id: 'image', url: data.image } : undefined,
+    ...(platforms.includes('ios') && {
+      ios_badgeType: 'Increase',
+      ios_badgeCount: 1,
+      ios_sound: 'default',
+      ios_attachments: data?.image ? { id: 'image', url: data.image } : undefined,
+      // ✅ IMPORTANTE: Configuración específica de iOS
+      apns_alert: {
+        title: title,
+        body: message
+      }
+    }),
     
-    // ✅ CONFIGURACIÓN GLOBAL
-    priority: 7, // Alta prioridad
-    content_available: true, // Para iOS background updates
-    mutable_content: true // Para modificaciones en iOS
+    // ✅ CONFIGURACIÓN GLOBAL MEJORADA
+    priority: 7,
+    content_available: true,
+    mutable_content: true,
+    
+    // ✅ INCLUIR EXPLÍCITAMENTE LAS PLATAFORMAS
+    isAnyWeb: platforms.includes('web'),
+    isAndroid: platforms.includes('android'),
+    isIos: platforms.includes('ios')
   };
 
-  // ⚠️ CORRECCIÓN: Remover configuraciones problemáticas basado en plataformas
-  if (!platforms.includes('web')) {
-    delete notificationPayload.chrome_web_icon;
-    delete notificationPayload.chrome_web_badge;
-    delete notificationPayload.web_url; // ⚠️ Solo web_url, no url
-  }
-
-  if (!platforms.includes('android')) {
-    delete notificationPayload.android_accent_color;
-    delete notificationPayload.android_led_color;
-    delete notificationPayload.android_visibility;
-    delete notificationPayload.large_icon;
-    delete notificationPayload.small_icon;
-  }
-
-  if (!platforms.includes('ios')) {
-    delete notificationPayload.ios_badgeType;
-    delete notificationPayload.ios_badgeCount;
-    delete notificationPayload.ios_sound;
-    delete notificationPayload.ios_attachments;
-  }
-
-  console.log('📤 Payload enviado a OneSignal:', JSON.stringify(notificationPayload, null, 2));
+  console.log('📤 Payload mejorado enviado a OneSignal:', JSON.stringify(notificationPayload, null, 2));
 
   const response = await axios.post(
     'https://onesignal.com/api/v1/notifications',
@@ -160,14 +154,13 @@ async function sendBySegments(title, message, target, data = {}, platforms = ['w
   return response.data;
 }
 
-// ✅ FUNCIÓN CORREGIDA: Enviar a usuarios específicos en múltiples plataformas
+// ✅ FUNCIÓN MEJORADA: Enviar a usuarios específicos
 async function sendToSpecificUsers(title, message, playerIds, data = {}, platforms = ['web', 'android', 'ios']) {
-  // Si playerIds es un array vacío, no enviar
   if (!playerIds || playerIds.length === 0) {
     throw new Error('No player IDs provided');
   }
 
-  // ✅ CONFIGURACIÓN CORREGIDA
+  // ✅ CONFIGURACIÓN MEJORADA
   const notificationPayload = {
     app_id: ONESIGNAL_APP_ID,
     headings: { en: title },
@@ -175,54 +168,46 @@ async function sendToSpecificUsers(title, message, playerIds, data = {}, platfor
     include_player_ids: Array.isArray(playerIds) ? playerIds : [playerIds],
     data: data || {},
     
-    // ✅ CONFIGURACIÓN CORREGIDA PARA WEB
-    chrome_web_icon: 'https://twogo.com/icon.png',
-    chrome_web_badge: 'https://twogo.com/badge.png',
-    // ⚠️ CORRECCIÓN: Usar solo web_url, NO url
-    web_url: data?.url || 'https://twogo.com',
+    // ✅ CONFIGURACIÓN ESPECÍFICA POR PLATAFORMA
+    ...(platforms.includes('web') && {
+      chrome_web_icon: 'https://twogo.com/icon.png',
+      chrome_web_badge: 'https://twogo.com/badge.png',
+      web_url: data?.url || 'https://twogo.com'
+    }),
     
-    // ✅ CONFIGURACIÓN PARA ANDROID
-    android_accent_color: 'FF4A6BFF',
-    android_led_color: 'FF4A6BFF',
-    android_visibility: 1,
-    large_icon: 'https://twogo.com/icon.png',
-    small_icon: 'ic_stat_onesignal_default',
+    ...(platforms.includes('android') && {
+      android_accent_color: 'FF4A6BFF',
+      android_led_color: 'FF4A6BFF',
+      android_visibility: 1,
+      large_icon: 'https://twogo.com/icon.png',
+      small_icon: 'ic_stat_onesignal_default',
+      android_channel_id: 'twogo-notifications',
+      priority: 10
+    }),
     
-    // ✅ CONFIGURACIÓN PARA iOS
-    ios_badgeType: 'Increase',
-    ios_badgeCount: 1,
-    ios_sound: 'notification.wav',
-    ios_attachments: data?.image ? { id: 'image', url: data.image } : undefined,
+    ...(platforms.includes('ios') && {
+      ios_badgeType: 'Increase',
+      ios_badgeCount: 1,
+      ios_sound: 'default',
+      ios_attachments: data?.image ? { id: 'image', url: data.image } : undefined,
+      apns_alert: {
+        title: title,
+        body: message
+      }
+    }),
     
     // ✅ CONFIGURACIÓN GLOBAL
-    priority: 10, // Máxima prioridad para notificaciones importantes
+    priority: 10,
     content_available: true,
-    mutable_content: true
+    mutable_content: true,
+    
+    // ✅ INCLUIR EXPLÍCITAMENTE LAS PLATAFORMAS
+    isAnyWeb: platforms.includes('web'),
+    isAndroid: platforms.includes('android'),
+    isIos: platforms.includes('ios')
   };
 
-  // ⚠️ CORRECCIÓN: Remover configuraciones basado en plataformas
-  if (!platforms.includes('web')) {
-    delete notificationPayload.chrome_web_icon;
-    delete notificationPayload.chrome_web_badge;
-    delete notificationPayload.web_url; // ⚠️ Solo web_url
-  }
-
-  if (!platforms.includes('android')) {
-    delete notificationPayload.android_accent_color;
-    delete notificationPayload.android_led_color;
-    delete notificationPayload.android_visibility;
-    delete notificationPayload.large_icon;
-    delete notificationPayload.small_icon;
-  }
-
-  if (!platforms.includes('ios')) {
-    delete notificationPayload.ios_badgeType;
-    delete notificationPayload.ios_badgeCount;
-    delete notificationPayload.ios_sound;
-    delete notificationPayload.ios_attachments;
-  }
-
-  console.log('📤 Payload para usuarios específicos:', JSON.stringify(notificationPayload, null, 2));
+  console.log('📤 Payload mejorado para usuarios específicos:', JSON.stringify(notificationPayload, null, 2));
 
   const response = await axios.post(
     'https://onesignal.com/api/v1/notifications',
@@ -239,7 +224,63 @@ async function sendToSpecificUsers(title, message, playerIds, data = {}, platfor
   return response.data;
 }
 
-// ✅ NUEVO: Endpoint para enviar notificación de aprobación de conductor
+// ✅ NUEVO: Endpoint para TESTEAR notificaciones específicas
+app.post('/api/test-notification', async (req, res) => {
+  try {
+    const { playerId, platform } = req.body;
+
+    if (!playerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Player ID is required for testing'
+      });
+    }
+
+    const title = '🔔 Test Twogo';
+    const message = '¡Esta es una notificación de prueba!';
+    
+    const data = {
+      type: 'test_notification',
+      timestamp: new Date().toISOString(),
+      action: 'open_app'
+    };
+
+    // Determinar plataformas basado en el test
+    let platforms = ['web', 'android', 'ios'];
+    if (platform) {
+      platforms = [platform];
+    }
+
+    const result = await sendToSpecificUsers(
+      title, 
+      message, 
+      playerId, 
+      data,
+      platforms
+    );
+
+    console.log(`✅ Notificación de TEST enviada a ${playerId} para plataformas: ${platforms}`);
+
+    res.json({
+      success: true,
+      message: 'Test notification sent successfully',
+      playerId: playerId,
+      platforms: platforms,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ Error enviando notificación de test:', error.response?.data || error.message);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send test notification',
+      details: error.response?.data || error.message
+    });
+  }
+});
+
+// ✅ Endpoint para enviar notificación de aprobación de conductor
 app.post('/api/send-driver-approval', async (req, res) => {
   try {
     const { driverId, driverName, oneSignalPlayerId } = req.body;
@@ -263,13 +304,12 @@ app.post('/api/send-driver-approval', async (req, res) => {
       url: 'twogo://driver/mode'
     };
 
-    // ✅ ENVIAR A TODAS LAS PLATAFORMAS
     const result = await sendToSpecificUsers(
       title, 
       message, 
       oneSignalPlayerId, 
       data,
-      ['web', 'android', 'ios'] // ✅ ENVIAR A TODAS LAS PLATAFORMAS
+      ['web', 'android', 'ios']
     );
 
     console.log(`✅ Notificación de aprobación enviada al conductor ${driverId}`);
@@ -291,7 +331,7 @@ app.post('/api/send-driver-approval', async (req, res) => {
   }
 });
 
-// ✅ NUEVO: Endpoint para enviar notificación de viaje
+// Mantener los otros endpoints igual...
 app.post('/api/send-ride-notification', async (req, res) => {
   try {
     const { 
@@ -314,7 +354,7 @@ app.post('/api/send-ride-notification', async (req, res) => {
     const data = {
       type: 'ride_notification',
       rideId: rideId,
-      notificationType: notificationType, // 'ride_requested', 'driver_assigned', 'ride_completed', etc.
+      notificationType: notificationType,
       userId: userId,
       timestamp: new Date().toISOString(),
       action: 'open_ride_details',
@@ -327,7 +367,7 @@ app.post('/api/send-ride-notification', async (req, res) => {
       message, 
       playerId, 
       data,
-      ['web', 'android', 'ios'] // ✅ ENVIAR A TODAS LAS PLATAFORMAS
+      ['web', 'android', 'ios']
     );
 
     console.log(`✅ Notificación de viaje enviada: ${notificationType}`);
@@ -349,119 +389,44 @@ app.post('/api/send-ride-notification', async (req, res) => {
   }
 });
 
-// ✅ NUEVO: Endpoint para enviar notificación de pago
-app.post('/api/send-payment-notification', async (req, res) => {
+// ✅ MANTENER endpoints existentes
+app.post('/api/send-to-user', async (req, res) => {
   try {
-    const { 
-      userId, 
-      playerId, 
-      paymentId, 
-      amount, 
-      status, 
-      title, 
-      message 
-    } = req.body;
+    const { title, message, playerId, data } = req.body;
 
-    if (!playerId || !paymentId) {
+    if (!title || !message || !playerId) {
       return res.status(400).json({
         success: false,
-        error: 'Player ID and payment ID are required'
+        error: 'Title, message and playerId are required'
       });
     }
 
-    const data = {
-      type: 'payment_notification',
-      paymentId: paymentId,
-      amount: amount,
-      status: status, // 'approved', 'rejected', 'pending'
-      userId: userId,
-      timestamp: new Date().toISOString(),
-      action: 'open_payments',
-      url: 'twogo://payments'
-    };
-
     const result = await sendToSpecificUsers(
-      title || `Pago ${status}`,
-      message || `Tu pago de $${amount} ha sido ${status}`,
-      playerId,
+      title, 
+      message, 
+      playerId, 
       data,
-      ['web', 'android', 'ios'] // ✅ ENVIAR A TODAS LAS PLATAFORMAS
+      ['web', 'android', 'ios']
     );
-
-    console.log(`✅ Notificación de pago enviada: ${paymentId}`);
 
     res.json({
       success: true,
-      message: 'Payment notification sent successfully',
+      message: 'Notification sent to user successfully',
       data: result
     });
 
   } catch (error) {
-    console.error('❌ Error enviando notificación de pago:', error.response?.data || error.message);
+    console.error('❌ Error enviando notificación a usuario:', error.response?.data || error.message);
     
     res.status(500).json({
       success: false,
-      error: 'Failed to send payment notification',
+      error: 'Failed to send notification to user',
       details: error.response?.data || error.message
     });
   }
 });
 
-// ✅ NUEVO: Endpoint para enviar notificación de soporte
-app.post('/api/send-support-notification', async (req, res) => {
-  try {
-    const { 
-      userId, 
-      playerId, 
-      supportId, 
-      title, 
-      message 
-    } = req.body;
-
-    if (!playerId || !supportId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Player ID and support ID are required'
-      });
-    }
-
-    const data = {
-      type: 'support_notification',
-      supportId: supportId,
-      userId: userId,
-      timestamp: new Date().toISOString(),
-      action: 'open_support',
-      url: `twogo://support/${supportId}`
-    };
-
-    const result = await sendToSpecificUsers(
-      title || 'Soporte Twogo',
-      message || 'Tienes una actualización de soporte',
-      playerId,
-      data,
-      ['web', 'android', 'ios'] // ✅ ENVIAR A TODAS LAS PLATAFORMAS
-    );
-
-    console.log(`✅ Notificación de soporte enviada: ${supportId}`);
-
-    res.json({
-      success: true,
-      message: 'Support notification sent successfully',
-      data: result
-    });
-
-  } catch (error) {
-    console.error('❌ Error enviando notificación de soporte:', error.response?.data || error.message);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Failed to send support notification',
-      details: error.response?.data || error.message
-    });
-  }
-});
-
-// ✅ NUEVO: Endpoint para verificar estado del servidor OneSignal
+// Endpoint para verificar estado
 app.get('/api/onesignal-status', async (req, res) => {
   try {
     const response = await axios.get(
@@ -496,73 +461,6 @@ app.get('/api/onesignal-status', async (req, res) => {
   }
 });
 
-// ✅ MANTENER endpoints existentes (para compatibilidad)
-app.post('/api/send-to-user', async (req, res) => {
-  try {
-    const { title, message, playerId, data } = req.body;
-
-    if (!title || !message || !playerId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Title, message and playerId are required'
-      });
-    }
-
-    const result = await sendToSpecificUsers(
-      title, 
-      message, 
-      playerId, 
-      data,
-      ['web', 'android', 'ios'] // ✅ ENVIAR A TODAS LAS PLATAFORMAS
-    );
-
-    res.json({
-      success: true,
-      message: 'Notification sent to user successfully',
-      data: result
-    });
-
-  } catch (error) {
-    console.error('❌ Error enviando notificación a usuario:', error.response?.data || error.message);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Failed to send notification to user',
-      details: error.response?.data || error.message
-    });
-  }
-});
-
-// Endpoint para obtener estadísticas de notificaciones
-app.get('/api/notification-stats/:notificationId', async (req, res) => {
-  try {
-    const { notificationId } = req.params;
-
-    const response = await axios.get(
-      `https://onesignal.com/api/v1/notifications/${notificationId}?app_id=${ONESIGNAL_APP_ID}`,
-      {
-        headers: {
-          'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`
-        }
-      }
-    );
-
-    res.json({
-      success: true,
-      data: response.data
-    });
-
-  } catch (error) {
-    console.error('❌ Error obteniendo estadísticas:', error.response?.data || error.message);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get notification statistics',
-      details: error.response?.data || error.message
-    });
-  }
-});
-
 // Manejo de errores
 app.use((err, req, res, next) => {
   console.error('🚨 Error del servidor:', err);
@@ -572,7 +470,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Manejo de rutas no encontradas
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -584,5 +481,5 @@ app.listen(PORT, () => {
   console.log(`🚀 Twogo OneSignal Server running on port ${PORT}`);
   console.log(`📱 OneSignal App ID: ${ONESIGNAL_APP_ID}`);
   console.log(`🌍 Supported platforms: Web, Android, iOS`);
-  console.log(`✅ Ready to send notifications to ALL platforms!`);
+  console.log(`✅ Ready to send notifications!`);
 });
